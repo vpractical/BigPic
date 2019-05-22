@@ -10,6 +10,7 @@ import android.graphics.Matrix;
 import android.graphics.Rect;
 import android.support.annotation.Nullable;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
@@ -23,11 +24,11 @@ import java.io.InputStream;
  */
 public class BigPic extends View {
     public BigPic(Context context) {
-        this(context,null,-1);
+        this(context, null, -1);
     }
 
     public BigPic(Context context, @Nullable AttributeSet attrs) {
-        this(context, attrs,-1);
+        this(context, attrs, -1);
     }
 
     public BigPic(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
@@ -41,32 +42,40 @@ public class BigPic extends View {
     private GestureDetector mGestureDetector;
     private BitmapRegionDecoder mBitmapRegionDecoder;
     private BitmapFactory.Options options;
-    private int mPicWidth,mPicHeight,mViewWidth,mViewHeight;
+    private int mPicWidth, mPicHeight, mViewWidth, mViewHeight;
+    /**
+     * 保存每次解码的bitmap的容器
+     */
     private Bitmap mBitmap;
-
-    //保存view宽高
+    /**
+     * 截取图片的矩形区域
+     */
     private Rect mRect = new Rect();
     private Matrix mMatrix = new Matrix();
     private float mScale = 4;
+    /**
+     * 多点触控
+     */
+    private float last1X, last1Y, last2X, last2Y;
+    private int pointer1, pointer2;
 
     private void init() {
         mScroller = new Scroller(mContext);
-        mGestureDetector = new GestureDetector(mContext,new BigGestureListener());
-        mMatrix.setScale(mScale,mScale);
+        mGestureDetector = new GestureDetector(mContext, new BigGestureListener());
+        mMatrix.setScale(mScale, mScale);
     }
 
-    public void setPic(InputStream is){
+    public void setPic(InputStream is) {
         try {
             options = new BitmapFactory.Options();
             options.inJustDecodeBounds = true;
-            BitmapFactory.decodeStream(is,null,options);
+            BitmapFactory.decodeStream(is, null, options);
             mPicWidth = options.outWidth;
             mPicHeight = options.outHeight;
             options.inMutable = true;
             options.inPreferredConfig = Bitmap.Config.RGB_565;
             options.inJustDecodeBounds = false;
-            mBitmapRegionDecoder = BitmapRegionDecoder.newInstance(is,false);
-            mBitmap = mBitmapRegionDecoder.decodeRegion(mRect,options);
+            mBitmapRegionDecoder = BitmapRegionDecoder.newInstance(is, false);
             invalidate();
         } catch (Exception e) {
             e.printStackTrace();
@@ -86,35 +95,75 @@ public class BigPic extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        if(mBitmapRegionDecoder == null) return;
+        if (mBitmapRegionDecoder == null) return;
         options.inBitmap = mBitmap;
-        mBitmap = mBitmapRegionDecoder.decodeRegion(mRect,options);
-        canvas.drawBitmap(mBitmap,mMatrix,null);
+        mBitmap = mBitmapRegionDecoder.decodeRegion(mRect, options);
+        canvas.drawBitmap(mBitmap, mMatrix, null);
     }
 
     @SuppressLint("ClickableViewAccessibility")
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        return mGestureDetector.onTouchEvent(event);
+        switch (event.getActionMasked()) {
+            case MotionEvent.ACTION_DOWN:
+                pointer1 = event.getPointerId(event.getActionIndex());
+                break;
+            case MotionEvent.ACTION_MASK:
+
+                break;
+            case MotionEvent.ACTION_POINTER_DOWN:
+                pointer2 = event.getPointerId(event.getActionIndex());
+                last1X = event.getX(event.findPointerIndex(pointer1));
+                last1Y = event.getY(event.findPointerIndex(pointer1));
+                last2X = event.getX(event.findPointerIndex(pointer2));
+                last2Y = event.getY(event.findPointerIndex(pointer2));
+                Log.e("----------", last1X + "/" + last1Y + "/" + last2X + "/" + last2Y);
+                break;
+            case MotionEvent.ACTION_MOVE:
+                if(event.getPointerCount() >= 2){
+                    float cur1X = event.getX(event.findPointerIndex(pointer1));
+                    float cur1Y = event.getY(event.findPointerIndex(pointer1));
+                    float cur2X = event.getX(event.findPointerIndex(pointer2));
+                    float cur2Y = event.getY(event.findPointerIndex(pointer2));
+
+                    float cur = (float) Math.sqrt((cur2X - cur1X) * (cur2X - cur1X) + (cur2Y - cur1Y) * (cur2Y - cur1Y));
+                    float last = (float) Math.sqrt((last2X - last1X) * (last2X - last1X) + (last2Y - last1Y) * (last2Y - last1Y));
+
+                    //TODO
+
+                    last1X = cur1X;
+                    last1Y = cur1Y;
+                    last2X = cur2X;
+                    last2Y = cur2Y;
+                }
+                break;
+            case MotionEvent.ACTION_POINTER_UP:
+                break;
+            case MotionEvent.ACTION_CANCEL:
+                break;
+        }
+
+        mGestureDetector.onTouchEvent(event);
+        return true;
     }
 
     @Override
     public void computeScroll() {
         super.computeScroll();
-        if(mScroller.isFinished()) return;
-        if(mScroller.computeScrollOffset()){
+        if (mScroller.isFinished()) return;
+        if (mScroller.computeScrollOffset()) {
             int dx = (int) ((mScroller.getCurrX() - mRect.left) / mScale);
             int dy = (int) ((mScroller.getCurrY() - mRect.top) / mScale);
-            mRect.offset(dx,dy);
+            mRect.offset(dx, dy);
             invalidate();
         }
     }
 
-    private class BigGestureListener implements GestureDetector.OnGestureListener{
+    private class BigGestureListener implements GestureDetector.OnGestureListener {
 
         @Override
         public boolean onDown(MotionEvent e) {
-            if(!mScroller.isFinished()){
+            if (!mScroller.isFinished()) {
                 mScroller.forceFinished(true);
             }
             return true;
@@ -131,23 +180,23 @@ public class BigPic extends View {
         }
 
         /**
-         * @param e1   接下
-         * @param e2   移动
+         * @param e1 接下
+         * @param e2 移动
          */
         @Override
         public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-            mRect.offset((int)(distanceX / mScale),(int)(distanceY / mScale));
-            if(mRect.left < 0){
-                mRect.offset(-mRect.left,0);
+            mRect.offset((int) (distanceX / mScale), (int) (distanceY / mScale));
+            if (mRect.left < 0) {
+                mRect.offset(-mRect.left, 0);
             }
-            if(mRect.top < 0){
-                mRect.offset(0,-mRect.top);
+            if (mRect.top < 0) {
+                mRect.offset(0, -mRect.top);
             }
-            if(mRect.right > mPicWidth){
-                mRect.offset(mPicWidth - mRect.right,0);
+            if (mRect.right > mPicWidth) {
+                mRect.offset(mPicWidth - mRect.right, 0);
             }
-            if(mRect.bottom > mPicHeight){
-                mRect.offset(0,mPicHeight - mRect.bottom);
+            if (mRect.bottom > mPicHeight) {
+                mRect.offset(0, mPicHeight - mRect.bottom);
             }
             invalidate();
             return false;
@@ -160,11 +209,10 @@ public class BigPic extends View {
 
         @Override
         public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
-            mScroller.fling(mRect.left,mRect.top,(int)-velocityX,(int)-velocityY,
-                    0,mPicWidth - (int)(mViewWidth / mScale),
-                    0,mPicHeight - (int)(mViewHeight / mScale));
+            mScroller.fling(mRect.left, mRect.top, (int) -velocityX, (int) -velocityY,
+                    0, mPicWidth - (int) (mViewWidth / mScale),
+                    0, mPicHeight - (int) (mViewHeight / mScale));
             return false;
         }
     }
-
 }
