@@ -15,6 +15,9 @@ public class MainActivity extends AppCompatActivity {
          super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        TestProguard tp = new TestProguard();
+        tp.show();
+
         BigPic bigPicView = findViewById(R.id.bigpic);
         InputStream is = null;
         try {

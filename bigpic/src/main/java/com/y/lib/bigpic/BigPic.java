@@ -117,7 +117,6 @@ public class BigPic extends View {
                 last1Y = event.getY(event.findPointerIndex(pointer1));
                 last2X = event.getX(event.findPointerIndex(pointer2));
                 last2Y = event.getY(event.findPointerIndex(pointer2));
-                Log.e("----------", last1X + "/" + last1Y + "/" + last2X + "/" + last2Y);
                 break;
             case MotionEvent.ACTION_MOVE:
                 if(event.getPointerCount() >= 2){
@@ -126,11 +125,11 @@ public class BigPic extends View {
                     float cur2X = event.getX(event.findPointerIndex(pointer2));
                     float cur2Y = event.getY(event.findPointerIndex(pointer2));
 
-                    float cur = (float) Math.sqrt((cur2X - cur1X) * (cur2X - cur1X) + (cur2Y - cur1Y) * (cur2Y - cur1Y));
                     float last = (float) Math.sqrt((last2X - last1X) * (last2X - last1X) + (last2Y - last1Y) * (last2Y - last1Y));
+                    float cur = (float) Math.sqrt((cur2X - cur1X) * (cur2X - cur1X) + (cur2Y - cur1Y) * (cur2Y - cur1Y));
 
-                    //TODO
-
+                    Log.e("----- cur : ", "" + cur);
+                    Log.e("----- last : ", "" + last);
                     last1X = cur1X;
                     last1Y = cur1Y;
                     last2X = cur2X;
